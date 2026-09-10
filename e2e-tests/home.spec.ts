@@ -24,4 +24,37 @@ test.describe('Home Page', () => {
     // Check that the welcome message is present using more specific locator
     await expect(page.getByText('Find your next game! And maybe even back one! Explore our collection!')).toBeVisible();
   });
+
+  test('should filter games by category and update the URL', async ({ page }) => {
+    await test.step('Select the Strategy category', async () => {
+      await page.getByTestId('category-filter').selectOption({ label: 'Strategy' });
+    });
+
+    await test.step('Verify filtered results and URL state', async () => {
+      await expect(page).toHaveURL(/\/\?category=\d+/);
+      await expect(page.getByTestId('games-result-count')).toHaveText('Showing 4 games');
+      await expect(page.getByTestId('game-card')).toHaveCount(21);
+      await expect(page.getByTestId('game-card').filter({ visible: true })).toHaveCount(4);
+    });
+  });
+
+  test('should combine category and publisher filters', async ({ page }) => {
+    await page.getByTestId('category-filter').selectOption({ label: 'Strategy' });
+    await page.getByTestId('publisher-filter').selectOption({ label: 'CodeForge Studios' });
+
+    await expect(page.getByTestId('games-result-count')).toHaveText('Showing 1 game');
+    await expect(page).toHaveURL(/\/\?category=\d+&publisher=\d+/);
+    await expect(page.getByTestId('game-card').filter({ hasText: 'DevOps Dominion' })).toBeVisible();
+    await expect(page.getByTestId('game-card').filter({ hasText: 'Pipeline Conquest' })).toBeHidden();
+  });
+
+  test('should restore filters from the URL and clear them', async ({ page }) => {
+    await page.goto('/?category=1&publisher=1');
+    await expect(page.getByTestId('category-filter')).toHaveValue('1');
+    await expect(page.getByTestId('publisher-filter')).toHaveValue('1');
+
+    await page.getByTestId('clear-filters').click();
+    await expect(page).toHaveURL('/');
+    await expect(page.getByTestId('games-result-count')).toHaveText('Showing 21 games');
+  });
 });
